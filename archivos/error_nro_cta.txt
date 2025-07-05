@@ -1,4 +1,0 @@
-El registro no fue procesado, numero de cuenta invalido: 123456/5
-El registro no fue procesado, numero de cuenta invalido: 234567/8
-El registro no fue procesado, numero de cuenta invalido: 456789/1
-El registro no fue procesado, numero de cuenta invalido: 789012/3

@@ -6,7 +6,7 @@
 #include <string.h>
 
 typedef struct {
-    char codigo_cta[7]; // Ej: "123456/5"
+    char codigo_cta[10]; // Para permitir "123456/5" + '\0'
     float saldo;
 } s_cuenta;
 

@@ -8,7 +8,7 @@ typedef struct {
 
 int main() {
     // Crear archivo cuenta.dat con datos de ejemplo
-    FILE* archivo_cuenta = fopen("cuenta.dat", "wb");
+    FILE* archivo_cuenta = fopen("cuentas.dat", "wb");
     if (!archivo_cuenta) {
         printf("Error al crear cuenta.dat\n");
         return 1;

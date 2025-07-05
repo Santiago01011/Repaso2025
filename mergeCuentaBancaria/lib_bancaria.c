@@ -145,11 +145,17 @@ int gestionar_cuenta(const char* nombreCuentas, const char* nombreMovimientos,
             continue;            
         }
         resCmp = cmp(&aux1, &aux2);
+        printf("Debug: Comparando '%s' vs '%s' = %d\n", aux1.codigo_cta, aux2.codigo_cta, resCmp);
+        
         if(resCmp == 0){
+            printf("Debug: ¡Coincidencia! Actualizando cuenta %s (%.2f) con %c %.2f\n", 
+                   aux1.codigo_cta, aux1.saldo, mov, aux2.saldo);
             actualizar(&aux1, mov, aux2.saldo);
+            printf("Debug: Nuevo saldo: %.2f\n", aux1.saldo);
             fwrite(&aux1, sizeof(s_cuenta), 1, pfa);
             lectura_cuenta = fread(&aux1, sizeof(s_cuenta), 1, pfc);
             lectura_movimiento = leerMovimiento(&aux2, &mov, pfm);
+            contador_procesados++;
         }
         if(resCmp<0){
             fwrite(&aux1, sizeof(s_cuenta), 1, pfa);
@@ -178,6 +184,8 @@ int gestionar_cuenta(const char* nombreCuentas, const char* nombreMovimientos,
     fclose(pfm);
     fclose(pfe);
     fclose(pfa);
+
+    printf("Debug: Movimientos procesados exitosamente: %d\n", contador_procesados);
 
     remove(nombreCuentas);
     rename("../archivos/cuentas.aux", nombreCuentas);
