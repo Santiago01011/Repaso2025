@@ -22,8 +22,15 @@ int ordenarVectorInsercion(tVector* vec, int (*cmp)(const void*, const void*));
 int myBSort(tVector* vec, int (*cmp)(const void*, const void*), const void*);
 int cargarVectorDeArchivo(tVector *vec, const char *nombreArchivo, void* elem);
 void mapVector(tVector *vec, void(*action)(void* elem));
+
+
 void printEntero(void* elem);
 void printCadena(void* elem);
+int cmpInt(const void* a, const void* b);
+int cmpString(const void* a, const void* b);
+int cmpCuenta(const void* a, const void* b);
+
+
 
 
 

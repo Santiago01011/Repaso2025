@@ -9,9 +9,9 @@ typedef struct {
 
 
 int main(){
-    FILE* archivo_cuenta = fopen("cuenta.dat", "rb");
+    FILE* archivo_cuenta = fopen("cuentas.dat", "rb");
     if (!archivo_cuenta) {
-        printf("Error al crear cuenta.dat\n");
+        printf("Error al crear cuentas.dat\n");
         return 1;
     }
 

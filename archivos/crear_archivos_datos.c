@@ -16,14 +16,14 @@ int main() {
 
     // Datos de cuenta inicial (ordenados por codigo_prod)
     s_cuenta items[] = {
-        {"123456/5", 1500.50},
-        {"179235/2", 2000.00},
-        {"382156/1", 500.75},
-        {"637043/2", 1000.00},
-        {"642315/6", 750.25},
-        {"653214/9", 300.00},
-        {"873152/3", 1200.00},
-        {"123456/7", 800.00}
+        {"123456", 2000.00},
+        {"234567", 5000.00},
+        {"456789", 1500.00},
+        {"637043", 10000.00},
+        {"789012", 300.00},
+        {"890123", 450.00},
+        {"9012345", 100.00},
+        {"987654", 2500.00}
     };
 
     int cantidad_items = sizeof(items) / sizeof(s_cuenta);
@@ -36,11 +36,11 @@ int main() {
     printf("Archivo cuenta.dat creado con %d productos.\n", cantidad_items);
 
     // Crear archivo movimientos.txt
-    FILE* archivo_movimientos = fopen("movimientos.txt", "w");
-    if (!archivo_movimientos) {
-        printf("Error al crear movimientos.txt\n");
-        return 1;
-    }
+    // FILE* archivo_movimientos = fopen("movimientos.txt", "w");
+    // if (!archivo_movimientos) {
+    //     printf("Error al crear movimientos.txt\n");
+    //     return 1;
+    // }
     /**
      * Claro! Analicemos en detalle la validación del número de cuenta. Es un algoritmo ingenioso que combina aritmética y 
      * manipulación de dígitos.
@@ -106,16 +106,16 @@ Número de cuenta completo:
 En resumen, el proceso es: separar por posición → restar → sumar cifras recursivamente. Para implementar esto en tu código, necesitarás manipular el número (probablemente con operaciones de módulo % y división /) para extraer cada dígito individualmente.
      */   //123456/5;D;1500.50
     // movimientos del día (ordenadas por codigo_prod)
-    fprintf(archivo_movimientos, "637043/2;D;20\n");
-    fprintf(archivo_movimientos, "123456/5;D;20\n");
-    fprintf(archivo_movimientos, "642315/6;C;10\n");
-    fprintf(archivo_movimientos, "873152/3;C;5\n");
-    fprintf(archivo_movimientos, "653214/9;D;12\n");
-    fprintf(archivo_movimientos, "382156/1;D;100\n");
-    fprintf(archivo_movimientos, "179235/2;D;50\n");
-    fprintf(archivo_movimientos, "123456/7;C;25\n");
+    // fprintf(archivo_movimientos, "637043/2;D;20\n");
+    // fprintf(archivo_movimientos, "123456/5;D;20\n");
+    // fprintf(archivo_movimientos, "642315/6;C;10\n");
+    // fprintf(archivo_movimientos, "873152/3;C;5\n");
+    // fprintf(archivo_movimientos, "653214/9;D;12\n");
+    // fprintf(archivo_movimientos, "382156/1;D;100\n");
+    // fprintf(archivo_movimientos, "179235/2;D;50\n");
+    // fprintf(archivo_movimientos, "123456/7;C;25\n");
 
-    fclose(archivo_movimientos);
+    //fclose(archivo_movimientos);
     printf("Archivo movimientos.txt creado con movimientos de ejemplo.\n");
 
     return 0;

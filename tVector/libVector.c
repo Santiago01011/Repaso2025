@@ -122,7 +122,7 @@ int cargarVectorDeArchivo(tVector *vec, const char *nombreArchivo, void *elem)
     
     while (fread(elem, vec->tamElem, 1, archivo) == 1)
     {
-        if (!insertarEnVectorOrdenado(vec, elem, cmpString))
+        if (!insertarEnVectorFinal(vec, elem))
         {
             fclose(archivo);
             return 0;
@@ -176,6 +176,22 @@ int cmpInt(const void *a, const void *b)
 int cmpString(const void *a, const void *b)
 {
     return strcmp((const char *)a, (const char *)b);
+}
+
+typedef struct {
+    char codigo_cta[9]; // Ej: "123456/5"
+    float saldo;;
+} s_cuenta;
+
+void printCuenta(void *elem)
+{
+    s_cuenta *cuenta = (s_cuenta *)elem;
+    printf("Cuenta: %s, Saldo: %.2f\n", cuenta->codigo_cta, cuenta->saldo);
+}
+
+int cmpCuenta(const void *a, const void *b)
+{
+    return strcmp(((s_cuenta *)a)->codigo_cta, ((s_cuenta *)b)->codigo_cta);
 }
 
 int main(){
@@ -247,6 +263,28 @@ int main(){
 
     // Ejemplo de uso con cargar y grabar vector desde un archivo
     printf("=== Ejemplo de cargar y grabar vector desde un archivo ===\n");
+    tVector vecCuenta;
+    if (crearVector(&vecCuenta, sizeof(s_cuenta)))
+    {
+        s_cuenta elemCuenta;
+        if (cargarVectorDeArchivo(&vecCuenta, "../archivos/cuenta.dat", &elemCuenta))
+        {
+            printf("Vector de cuentas cargado desde archivo:\n");
+            ordenarVectorInsercion(&vecCuenta, cmpCuenta);
+            mapVector(&vecCuenta, printCuenta);
+
+            if (grabarVectorEnArchivo(&vecCuenta, "cuenta_grabada.dat", &elemCuenta))
+                printf("\nVector grabado en cuenta_grabada.dat\n");
+            else
+                printf("\nError al grabar el vector en el archivo\n");
+
+            vectorLiberar(&vecCuenta);
+        }
+        else
+        {
+            printf("Error al cargar el vector desde el archivo\n");
+        }
+    }
 
     return 0;
 }
