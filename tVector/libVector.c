@@ -28,8 +28,7 @@ void vectorLiberar(tVector *vec)
 int insertarEnVectorOrdenado(tVector *vec, void *elem, int (*cmp)(const void *, const void *))
 {
     int pos = 0;
-    void *data = vec->data;
-    if (!vec->data)
+    if (!vec || !vec->data)
         return 0;
     if (vec->cantElem >= vec->totalLength)
     {
@@ -39,21 +38,84 @@ int insertarEnVectorOrdenado(tVector *vec, void *elem, int (*cmp)(const void *, 
         vec->data = aux;
         vec->totalLength *= 2;
     }
-
-    pos = myBSort(vec, cmp, elem);
-    if( pos == -1 ){
-        memcpy(data + (vec->tamElem * vec->cantElem), elem, vec->tamElem);
-        vec->cantElem++;
-        return 1;
-    }
-    memmove(data + (pos + 1)  * vec->tamElem,
-            data + pos * vec->tamElem,
+    
+    while (pos < vec->cantElem && cmp(elem, (char *)vec->data + pos * vec->tamElem) > 0)
+        pos++;
+    
+    memmove((char *)vec->data + (pos + 1) * vec->tamElem, 
+            (char *)vec->data + pos * vec->tamElem, 
             (vec->cantElem - pos) * vec->tamElem);
-
-    memcpy(data + pos * vec->tamElem, elem, vec->tamElem);
+    
+    memcpy((char *)vec->data + pos * vec->tamElem, elem, vec->tamElem);
     vec->cantElem++;
     return 1;
 }
+
+/**
+ * @brief Inserts an element into an ordered vector. If a duplicate is found,
+ * it updates the existing element using the provided 'actualizar' function.
+ *
+ * @param vec           Pointer to the vector.
+ * @param elem          Pointer to the element to be inserted/updated.
+ * @param cmp           Comparison function to maintain order and find duplicates.
+ * @param actualizar    Function to be called to update an existing element if a duplicate is found.
+ * @return              1 on success, 0 on failure (e.g., memory allocation error).
+ */
+int vectorOrdInsertar_ALU(tVector* vec, const void* elem, int (*cmp)(const void*, const void*), void (*actualizar)(void*, const void*))
+{
+    // --- Step 1: Find the correct position ---
+    // We iterate to find the first element that is NOT smaller than our new element.
+    size_t pos = 0;
+    char* data = (char*)vec->data; // Use char* for easy pointer arithmetic
+
+    while (pos < vec->cantElem && cmp(elem, data + pos * vec->tamElem) > 0)
+    {
+        pos++;
+    }
+
+    // --- Step 2: Check for a duplicate at that position ---
+    // If pos is still in bounds AND the element at pos is equal to our new element...
+    if (pos < vec->cantElem && cmp(elem, data + pos * vec->tamElem) == 0)
+    {
+        // It's a duplicate. Call the update function and we're done.
+        if (actualizar) // Make sure the update function is not NULL
+        {
+            actualizar(data + pos * vec->tamElem, elem);
+        }
+        return 1; // Success
+    }
+
+    // --- Step 3: Handle a new insertion ---
+    // If we reached here, the element is new and needs to be inserted at 'pos'.
+
+    // First, check if we have enough capacity.
+    if (vec->cantElem == vec->totalLength)
+    {
+        size_t nuevaCap = vec->totalLength == 0 ? 1 : vec->totalLength * 2; // Start with 1, then double
+        void* aux = realloc(vec->data, nuevaCap * vec->tamElem);
+
+        if (!aux)
+            return 0; // Failure: Could not allocate memory
+        vec->data = aux;
+        vec->cantElem = nuevaCap;
+        data = (char*)vec->data; // The pointer might have changed after realloc
+    }
+
+    // Second, make room for the new element by shifting everything from 'pos' onwards.
+    // memmove is safe for overlapping memory regions.
+    memmove(data + (pos + 1) * vec->tamElem,  // Destination: one spot to the right
+            data + pos * vec->tamElem,        // Source: the current position
+            (vec->cantElem - pos) * vec->tamElem);  // Number of bytes to move
+
+    // Third, copy the new element into the newly created space.
+    memcpy(data + pos * vec->tamElem, elem, vec->tamElem);
+
+    // Finally, update the element count.
+    vec->cantElem++;
+
+    return 1; // Success
+}
+
 int insertarEnVectorFinal(tVector *vec, void *elem)
 {
     if (!vec->data)
@@ -192,99 +254,4 @@ void printCuenta(void *elem)
 int cmpCuenta(const void *a, const void *b)
 {
     return strcmp(((s_cuenta *)a)->codigo_cta, ((s_cuenta *)b)->codigo_cta);
-}
-
-int main(){
-
-    // Ejemplo de uso con enteros
-    printf("=== Ejemplo con enteros ===\n");
-    tVector vec;
-    if (crearVector(&vec, sizeof(int)))
-    {
-        int elem1 = 5, elem2 = 3, elem3 = 8, elem4 = 1, elem5 = 4, elem6 = 2, elem7 = 6, elem8 = 7;
-
-        insertarEnVectorFinal(&vec, &elem1);
-        insertarEnVectorFinal(&vec, &elem2);
-        insertarEnVectorFinal(&vec, &elem3);
-        insertarEnVectorFinal(&vec, &elem4);
-        insertarEnVectorFinal(&vec, &elem5);
-        insertarEnVectorFinal(&vec, &elem6);
-        insertarEnVectorFinal(&vec, &elem7);
-        insertarEnVectorFinal(&vec, &elem8);
-        
-
-        printf("Vector antes de ordenar:\n");
-        mapVector(&vec, printEntero);
-
-        printf("\n");
-        ordenarVectorInsercion(&vec, cmpInt);
-        printf("Vector despues de ordenar:\n");
-       mapVector(&vec, printEntero);
-       
-        printf("\n\n");
-
-        free(vec.data);
-    }
-
-    // Ejemplo de uso con cadenas de caracteres
-    printf("=== Ejemplo con cadenas de caracteres ===\n");
-    tVector vecString;
-    if (crearVector(&vecString, 20 * sizeof(char))) // Suponemos maximo 20 caracteres por string
-    {
-        char elem1[] = "manzana";
-        char elem2[] = "banana";
-        char elem3[] = "zebra";
-        char elem4[] = "abeja";
-        char elem5[] = "abbeja";
-        char elem6[] = "elefante";
-        char elem7[] = "perro";
-        char elem8[] = "tigre";
-
-        insertarEnVectorFinal(&vecString, elem1);
-        insertarEnVectorFinal(&vecString, elem2);
-        insertarEnVectorFinal(&vecString, elem3);
-        insertarEnVectorFinal(&vecString, elem4);
-        insertarEnVectorFinal(&vecString, elem5);
-        insertarEnVectorFinal(&vecString, elem6);
-        insertarEnVectorFinal(&vecString, elem7);
-        insertarEnVectorFinal(&vecString, elem8);
-
-        printf("Vector de strings antes de ordenar:\n");
-        mapVector(&vecString, printCadena);
-
-        printf("\n");
-        ordenarVectorInsercion(&vecString, cmpString);
-        printf("Vector de strings despues de ordenar:\n");
-        mapVector(&vecString, printCadena);
-        printf("\n");
-
-        vectorLiberar(&vecString);
-    }
-
-    // Ejemplo de uso con cargar y grabar vector desde un archivo
-    printf("=== Ejemplo de cargar y grabar vector desde un archivo ===\n");
-    tVector vecCuenta;
-    if (crearVector(&vecCuenta, sizeof(s_cuenta)))
-    {
-        s_cuenta elemCuenta;
-        if (cargarVectorDeArchivo(&vecCuenta, "../archivos/cuenta.dat", &elemCuenta))
-        {
-            printf("Vector de cuentas cargado desde archivo:\n");
-            ordenarVectorInsercion(&vecCuenta, cmpCuenta);
-            mapVector(&vecCuenta, printCuenta);
-
-            if (grabarVectorEnArchivo(&vecCuenta, "cuenta_grabada.dat", &elemCuenta))
-                printf("\nVector grabado en cuenta_grabada.dat\n");
-            else
-                printf("\nError al grabar el vector en el archivo\n");
-
-            vectorLiberar(&vecCuenta);
-        }
-        else
-        {
-            printf("Error al cargar el vector desde el archivo\n");
-        }
-    }
-
-    return 0;
 }
