@@ -200,9 +200,10 @@ int grabarVectorEnArchivo(tVector *vec, const char *nombreArchivo, void *elem)
     FILE *archivo = fopen(nombreArchivo, "wb");
     if (!archivo)
         return 0;
-    for (int i = 0; i < vec->cantElem; i++)
+    for (int i = 0; i < vec->totalLength; i++)
     {
         memcpy(elem, (char *)vec->data + i * vec->tamElem, vec->tamElem);
+        vec->cantElem++;
         if (fwrite(elem, vec->tamElem, 1, archivo) != 1)
         {
             fclose(archivo);
