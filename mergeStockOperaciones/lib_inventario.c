@@ -1,28 +1,19 @@
 #include "lib_inventario.h"
 
-int merge_generico(
-    const char* archivo1,
-    const char* archivo2, 
-    const char* archivo_salida,
-    size_t tam_elemento,
-    int (*leer_archivo1)(void* elemento, FILE* archivo),
-    int (*leer_archivo2)(void* elemento, FILE* archivo),
-    int (*escribir_salida)(const void* elemento, FILE* archivo),
-    int (*comparar)(const void* elem1, const void* elem2),
-    void (*actualizar)(void* elem1, const void* elem2),
-    void (*procesar_no_encontrado)(const void* elem2, FILE* archivo_errores)
-) {
+int merge_generico( const char* archivo1, const char* archivo2, const char* archivo_salida, size_t tam_elemento,
+    int (*leer_archivo1)(void* elemento, FILE* archivo), int (*leer_archivo2)(void* elemento, FILE* archivo),
+    int (*escribir_salida)(const void* elemento, FILE* archivo), int (*comparar)(const void* elem1, const void* elem2),
+    void (*actualizar)(void* elem1, const void* elem2), void (*procesar_no_encontrado)(const void* elem2, FILE* archivo_errores) ){
+    
     FILE *pf1, *pf2, *pf_salida, *pf_errores;
     void *elem1, *elem2;
     int hay_elem1, hay_elem2, resultado_cmp;
-    int elementos_procesados = 0;
-    
+    int elementos_procesados = 0;    
     // Validación de parámetros esenciales
     if (!archivo1 || !archivo2 || !archivo_salida || !leer_archivo1 || 
         !leer_archivo2 || !escribir_salida || !comparar || tam_elemento == 0) {
         return -1;
-    }
-    
+    }    
     // Asignar memoria para los elementos
     elem1 = malloc(tam_elemento);
     elem2 = malloc(tam_elemento);
@@ -280,108 +271,93 @@ int ejemplo_merge_flexible(const char* archivo_bin, const char* archivo_csv, con
     );
 }
 
-
-
 /**
- * @brief Updates a stock file based on an operations file.
+ * @brief Realiza un apareo (merge) genérico de un archivo maestro con un archivo de novedades.
  *
- * This function merges operations from a text file into a binary stock file.
- * It reads both files, which are assumed to be sorted by product code.
- * It applies the operations to the corresponding stock items and writes the
- * updated stock to a new file. Products from the operations file that are not
- * found in the stock file are logged as errors.
- *
- * After processing, the original stock file is replaced with the newly
- * generated, updated stock file.
- *
- * @param ruta_stock Path to the binary stock file (e.g., "stock.dat").
- * @param ruta_operaciones Path to the text file with operations (e.g., "operaciones.txt").
- * @param actualizar A function pointer to the callback function that performs the
- *                   actual update on a stock item. This function receives the
- *                   stock item, the operation type, and the quantity.
- * @return The number of stock records that were successfully updated. Returns -1
- *         if there is an error opening any of the required files.
+ * @param config        Puntero a la estructura de configuración que define la lógica del merge.
+ * @param pathMaestro   Ruta al archivo maestro (binario).
+ * @param pathNovedades Ruta al archivo de novedades (puede ser texto o binario).
+ * @param pathErrores   Ruta al archivo de log para novedades sin correspondencia (opcional, puede ser NULL).
+ * @return              La cantidad de registros maestros escritos/actualizados, o -1 en caso de error.
  */
-int actualizar_stock(const char* ruta_stock, const char* ruta_operaciones, void (*actualizar)(s_stock_item*, char, int)){
-    FILE *pfs, *pfo, *pfe, *pfn;
-    s_stock_item aux1, aux2;
-    int res = 0, registros_actualizados = 0;
+int mergeArchivos(const MergeConfig* config, const char* pathMaestro, const char* pathNovedades, const char* pathErrores) {
+    // --- Validación y Setup ---
+    if (!config || !pathMaestro || !pathNovedades) return -1;
 
+    FILE *pfMaestro = fopen(pathMaestro, "rb");
+    if (!pfMaestro) { /* ... manejo de error ... */ return -1; }
 
-    pfo = fopen(ruta_operaciones, "rt");
-    if(!pfo){
-        printf("Error al abrir el archivo: %s", ruta_operaciones);
-        return -1;
+    // El archivo de novedades puede ser texto o binario, se usa "r" y la función leer se encarga.
+    FILE *pfNovedades = fopen(pathNovedades, "r");
+    if (!pfNovedades) { /* ... manejo de error ... */ fclose(pfMaestro); return -1; }
+
+    // El archivo de salida temporal
+    FILE *pfSalida = fopen("temp_merge.tmp", "wb");
+    if (!pfSalida) { /* ... manejo de error ... */ fclose(pfMaestro); fclose(pfNovedades); return -1; }
+
+    FILE *pfErrores = NULL;
+    if (pathErrores && config->procesarNovedadSinMaestro) {
+        pfErrores = fopen(pathErrores, "w"); // Si falla, podemos continuar sin loguear.
     }
 
-    pfs = fopen(ruta_stock, "r+b");
-    if(!pfs){
-        printf("Error al abrir el archivo: %s", ruta_stock);
-        fclose(pfo);
-        return -1;
-    }
-    pfe = fopen("../archivos/errores.txt", "w");
-    if(!pfe){
-        printf("Error al abrir el archivo: %s", "archivos/errores.txt");
-        fclose(pfs);
-        fclose(pfo);
-        return -1;
-    }
-    pfn = fopen("../archivos/nuevo_stock.dat", "wb");
-    if(!pfn){
-        printf("Error al abrir el archivo: %s", "archivos/nuevo_stock.dat");
-        fclose(pfs);
-        fclose(pfo);
-        fclose(pfe);
-        return -1;
-    }
+    void* elemMaestro = malloc(config->tamElemento);
+    void* elemNovedad = malloc(config->tamElemento);
+    // ... validar que malloc no falló ...
 
-    fread(&aux1, sizeof(s_stock_item), 1, pfs);
-    int hay_stock = !feof(pfs);
-    int hay_operacion = readOperacion(&aux2, pfo);
-    
-    while( hay_stock || hay_operacion ){
-        if( !hay_stock ){
-            // Solo quedan operaciones - reportar error
-            fprintf(pfe, "Producto %s no encontrado en stock.dat\n", aux2.codigo_prod);
-            hay_operacion = readOperacion(&aux2, pfo);
-        }
-        else if( !hay_operacion ){
-            // Solo queda stock - copiar sin modificar
-            fwrite(&aux1, sizeof(s_stock_item), 1, pfn);
-            hay_stock = (fread(&aux1, sizeof(s_stock_item), 1, pfs) == 1);
-        }
-        else {
-            res = strcmp(aux1.codigo_prod, aux2.codigo_prod);
-            if( res == 0 ){
-                actualizar(&aux1, aux2.descripcion[0], aux2.cantidad);
-                registros_actualizados++;
-                hay_operacion = readOperacion(&aux2, pfo);
-                // Si no hay más operaciones o la siguiente es de otro producto, escribir y avanzar
-                if( !hay_operacion || strcmp(aux1.codigo_prod, aux2.codigo_prod) != 0 ){
-                    fwrite(&aux1, sizeof(s_stock_item), 1, pfn);
-                    hay_stock = (fread(&aux1, sizeof(s_stock_item), 1, pfs) == 1);
+    int leidoMaestro = config->leerMaestro(elemMaestro, pfMaestro);
+    int leidoNovedad = config->leerNovedad(elemNovedad, pfNovedades);
+    int count = 0;
+
+    // --- Bucle Principal de Apareo ---
+    while (leidoMaestro && leidoNovedad) {
+        int cmp = config->comparar(elemMaestro, elemNovedad);
+
+        if (cmp < 0) { // El maestro es menor, no tiene novedades. Se graba como está.
+            config->escribirMaestro(elemMaestro, pfSalida);
+            leidoMaestro = config->leerMaestro(elemMaestro, pfMaestro);
+        } else if (cmp > 0) { // La novedad es menor, no tiene un maestro. Se informa el error.
+            if (pfErrores) config->procesarNovedadSinMaestro(elemNovedad, pfErrores);
+            leidoNovedad = config->leerNovedad(elemNovedad, pfNovedades);
+        } else { // Las claves son iguales. Bucle de actualización.
+            // **AQUÍ ESTÁ LA LÓGICA CORREGIDA**
+            // Mientras la clave de la novedad siga siendo la misma, se actualiza el maestro.
+            while (leidoNovedad && config->comparar(elemMaestro, elemNovedad) == 0) {
+                if (config->actualizar) {
+                    config->actualizar(elemMaestro, elemNovedad);
                 }
+                leidoNovedad = config->leerNovedad(elemNovedad, pfNovedades);
             }
-            else if( res < 0 ){
-                fwrite(&aux1, sizeof(s_stock_item), 1, pfn);
-                hay_stock = (fread(&aux1, sizeof(s_stock_item), 1, pfs) == 1);
-            }
-            else {
-                fprintf(pfe, "Producto %s no encontrado en stock.dat\n", aux2.codigo_prod);
-                hay_operacion = readOperacion(&aux2, pfo);
-            }
+            // Cuando la clave cambia (o se acaban las novedades), se escribe el maestro actualizado.
+            config->escribirMaestro(elemMaestro, pfSalida);
+            leidoMaestro = config->leerMaestro(elemMaestro, pfMaestro);
         }
     }
 
-    fclose(pfs);
-    fclose(pfo);
-    fclose(pfe);
-    fclose(pfn);
-    remove(ruta_stock);
-    rename("../archivos/nuevo_stock.dat", ruta_stock);
+    // --- Drenaje de archivos remanentes ---
+    // Si quedan maestros, se copian tal cual.
+    while (leidoMaestro) {
+        config->escribirMaestro(elemMaestro, pfSalida);
+        leidoMaestro = config->leerMaestro(elemMaestro, pfMaestro);
+    }
+    // Si quedan novedades, se informan como error.
+    while (leidoNovedad) {
+        if (pfErrores) config->procesarNovedadSinMaestro(elemNovedad, pfErrores);
+        leidoNovedad = config->leerNovedad(elemNovedad, pfNovedades);
+    }
 
-    return registros_actualizados;
+    // --- Limpieza y finalización ---
+    free(elemMaestro);
+    free(elemNovedad);
+    fclose(pfMaestro);
+    fclose(pfNovedades);
+    fclose(pfSalida);
+    if(pfErrores) fclose(pfErrores);
+
+    // Reemplazar el archivo original con el temporal
+    remove(pathMaestro);
+    rename("temp_merge.tmp", pathMaestro);
+
+    return count;
 }
 
 int readOperacion(s_stock_item* op, FILE* arch){

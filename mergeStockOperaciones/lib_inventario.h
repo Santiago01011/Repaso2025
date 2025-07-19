@@ -39,7 +39,18 @@ int merge_generico(
     void (*procesar_no_encontrado)(const void* elem2, FILE* archivo_errores)
 );
 
-int actualizar_stock(const char* ruta_stock, const char* ruta_operaciones, void (*actualizar)(s_stock_item*, char, int));
+typedef struct {
+    size_t tamElemento;
+    // Punteros a las funciones de lógica de negocio
+    int (*leerMaestro)(void* elemento, FILE* archivo);
+    int (*leerNovedad)(void* elemento, FILE* archivo);
+    int (*escribirMaestro)(const void* elemento, FILE* archivo);
+    int (*comparar)(const void* elemMaestro, const void* elemNovedad);
+    void (*actualizar)(void* elemMaestro, const void* elemNovedad);
+    void (*procesarNovedadSinMaestro)(const void* elemNovedad, FILE* archivoErrores);
+} MergeConfig;
+int mergeArchivos(const MergeConfig* config, const char* pathMaestro, const char* pathNovedades, const char* pathErrores);
+
 int actualizar_stock_v2(const char* ruta_stock, const char* ruta_operaciones, const char* ruta_salida);
 int readOperacion(s_stock_item* op, FILE* arch);
 
