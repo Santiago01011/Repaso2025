@@ -5,32 +5,52 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define TAM_INICIAL 10
+// =================================================================
+// TYPE DEFINITIONS
+// =================================================================
 
+// Using an enum for return codes makes the calling code more readable.
+typedef enum {
+    VEC_OK = 1,
+    VEC_ERROR = 0,
+    VEC_ERROR_MEMORY = -1,
+    VEC_NOT_FOUND = -2
+} VectorStatus;
 
 typedef struct {
-    void* data;
-    int cantElem, totalLength;
-    size_t tamElem;
-} tVector;
+    void* items;       // Renamed 'vec' to 'items' for clarity
+    size_t count;       // Renamed 'ce' to 'count'
+    size_t capacity;    // Renamed 'cap' to 'capacity'
+    size_t itemSize;    // Renamed 'tamElem' to 'itemSize'
+} Vector;
 
-int crearVector(tVector* vec, size_t tamElem);
-void vectorLiberar(tVector *vec);
-int insertarEnVectorFinal(tVector* vec, void* elem);
-int insertarEnVectorOrdenado(tVector* vec, void* elem, int (*cmp)(const void*, const void*));
-int insertarEnVectorOrdenadoSinDup(tVector *vec, void *elem, int (*cmp)(const void *, const void *), void (*actu)(void* actualizado, const void *actualizador));
-int ordenarVectorInsercion(tVector *vec, int (*cmp)(const void *, const void *));
-int myBSort(tVector* vec, int (*cmp)(const void*, const void*), const void*);
-int cargarVectorDeArchivo(tVector *vec, const char *nombreArchivo, void* elem);
-int grabarVectorEnArchivo(tVector *vec, const char *nombreArchivo, void *elem);
-void mapVector(tVector *vec, void(*action)(void* elem));
+// Function pointer definitions remain the same
+typedef int (*CmpFunc)(const void* d1, const void* d2);
+typedef void (*UpdateFunc)(void* toUpdate, const void* updater);
+typedef void (*ActionFunc)(void* item, void* userData);
 
 
-void printEntero(void* elem);
-void printCadena(void* elem);
-void printCuenta(void* elem);
-int cmpInt(const void* a, const void* b);
-int cmpString(const void* a, const void* b);
+// =================================================================
+// FUNCTION PROTOTYPES (The Public API)
+// =================================================================
+
+// --- Core Lifecycle Functions ---
+VectorStatus vector_init(Vector* vec, size_t itemSize);
+void vector_destroy(Vector* vec);
+
+// --- Insertion Functions ---
+VectorStatus vector_push_back(Vector* vec, const void* item);
+VectorStatus vector_insert_ordered(Vector* vec, const void* item, CmpFunc cmp, UpdateFunc update);
+
+// --- Deletion and Searching ---
+VectorStatus vector_remove_duplicates_ordered(Vector* vec, CmpFunc cmp, UpdateFunc update);
+int vector_search_ordered(const Vector* vec, const void* key, CmpFunc cmp);
+
+// --- Access and Iteration ---
+void* vector_get_item_at(const Vector* vec, size_t index);
+void vector_map(const Vector* vec, ActionFunc action, void* userData);
+
+// --- Utility Functions ---
 int cmpCuenta(const void* a, const void* b);
 
 
